@@ -223,6 +223,28 @@ Frontend: `npm run build` runs the TypeScript strict type-check plus the product
 
 ## Deployment notes
 
+### Hosted demo: Netlify (frontend) + Render (API + PostgreSQL)
+
+Netlify serves the static React build. Requests to `/api/*` are proxied server-side to the Render API, so the browser only ever talks to the Netlify origin, and no backend URL or key ends up in the JS bundle.
+
+1. **Render (backend):**
+   - Go to https://dashboard.render.com, then **New → Blueprint**, and pick this repo. `render.yaml` creates `festiveplate-api` (free web service) and `festiveplate-db` (free Postgres).
+   - Leave `SARVAM_API_KEY` and `FLAGSMITH_ENVIRONMENT_KEY` blank to run in demo mode. `JWT_SECRET` and `METRICS_TOKEN` are generated automatically.
+   - On first boot the service runs migrations and seeds demo data. Check that `https://<service>.onrender.com/health` returns `{"status":"ok"}`.
+2. **Netlify (frontend):**
+   - Go to https://app.netlify.com, then **Add new site → Import from Git**, and pick this repo. `netlify.toml` already sets base `frontend`, build `npm ci && npm run build` and publish `dist`.
+   - If Render assigned a URL other than `festiveplate-api.onrender.com`, update the two `to =` lines in `netlify.toml` and push.
+3. Open the Netlify URL and log in with any demo account (password `Demo@12345`).
+
+Free-tier caveats:
+- The Render free service sleeps after about 15 minutes idle, so the first request can take about 30-50 s.
+- Free Postgres expires after 30 days.
+- Uploaded photos are stored on ephemeral disk and lost on restart.
+- Netlify proxy requests time out after about 26 s.
+
+### General
+
+
 - Set `APP_ENV=production`, a strong `JWT_SECRET`, a managed PostgreSQL `DATABASE_URL`, and `CORS_ORIGINS` for your domain.
 - Set `SEED_DEMO_DATA=false` in production.
 - Put the nginx container (or any reverse proxy) behind TLS. Browsers allow microphone access only on HTTPS or localhost.

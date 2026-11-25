@@ -1,0 +1,43 @@
+# Render Blueprint: FestivePlate API + PostgreSQL.
+# Render dashboard -> New -> Blueprint -> pick this repo. Secrets marked sync:false are prompted for (leave blank for demo mode).
+services:
+  - type: web
+    name: festiveplate-api
+    runtime: python
+    plan: free
+    region: singapore
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    # Migrate, seed labelled demo data (idempotent), serve. Trust the platform proxy for client IPs (rate limiting).
+    startCommand: alembic upgrade head && if [ "${SEED_DEMO_DATA:-true}" = "true" ]; then python -m app.seed; fi && uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips '*'
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: APP_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: festiveplate-db
+          property: connectionString
+      - key: SEED_DEMO_DATA
+        value: "true"
+      - key: UPLOAD_DIR
+        value: /tmp/festiveplate-uploads
+      - key: CORS_ORIGINS
+        value: https://festiveplate.netlify.app
+      - key: SARVAM_API_KEY
+        sync: false
+      - key: FLAGSMITH_ENVIRONMENT_KEY
+        sync: false
+      - key: METRICS_TOKEN
+        generateValue: true
+
+databases:
+  - name: festiveplate-db
+    plan: free
+    region: singapore
+    databaseName: festiveplate
+    user: festiveplate
