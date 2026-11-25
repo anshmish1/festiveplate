@@ -1,6 +1,41 @@
-# Render Blueprint: FestivePlate API + PostgreSQL.
+# Render Blueprint: FestivePlate web app (static) + API + PostgreSQL.
 # Render dashboard -> New -> Blueprint -> pick this repo. Secrets marked sync:false are prompted for (leave blank for demo mode).
 services:
+  # React frontend. The browser only talks to this origin; /api is proxied to the API service.
+  - type: web
+    name: festiveplate
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+    routes:
+      # Change the host if Render gives the API service a different URL.
+      - type: rewrite
+        source: /api/*
+        destination: https://festiveplate-api.onrender.com/api/*
+      - type: rewrite
+        source: /health
+        destination: https://festiveplate-api.onrender.com/health
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /*
+        name: Permissions-Policy
+        value: microphone=(self), geolocation=(self), camera=()
+
   - type: web
     name: festiveplate-api
     runtime: python
@@ -27,7 +62,7 @@ services:
       - key: UPLOAD_DIR
         value: /tmp/festiveplate-uploads
       - key: CORS_ORIGINS
-        value: https://festiveplate.netlify.app
+        value: https://festiveplate.onrender.com
       - key: SARVAM_API_KEY
         sync: false
       - key: FLAGSMITH_ENVIRONMENT_KEY

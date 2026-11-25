@@ -223,24 +223,25 @@ Frontend: `npm run build` runs the TypeScript strict type-check plus the product
 
 ## Deployment notes
 
-### Hosted demo: Netlify (frontend) + Render (API + PostgreSQL)
+### Hosted demo on Render (frontend + API + PostgreSQL)
 
-Netlify serves the static React build. Requests to `/api/*` are proxied server-side to the Render API, so the browser only ever talks to the Netlify origin, and no backend URL or key ends up in the JS bundle.
+`render.yaml` is a Render Blueprint that creates three things:
+- **`festiveplate`**: free static site with the React build. It proxies `/api/*` to the API, so the browser only talks to one origin and no backend URL or key is in the JS bundle.
+- **`festiveplate-api`**: free Python web service. On every start it runs migrations, seeds the labelled demo data (idempotent) and serves the API.
+- **`festiveplate-db`**: free PostgreSQL 16.
 
-1. **Render (backend):**
-   - Go to https://dashboard.render.com, then **New → Blueprint**, and pick this repo. `render.yaml` creates `festiveplate-api` (free web service) and `festiveplate-db` (free Postgres).
-   - Leave `SARVAM_API_KEY` and `FLAGSMITH_ENVIRONMENT_KEY` blank to run in demo mode. `JWT_SECRET` and `METRICS_TOKEN` are generated automatically.
-   - On first boot the service runs migrations and seeds demo data. Check that `https://<service>.onrender.com/health` returns `{"status":"ok"}`.
-2. **Netlify (frontend):**
-   - Go to https://app.netlify.com, then **Add new site → Import from Git**, and pick this repo. `netlify.toml` already sets base `frontend`, build `npm ci && npm run build` and publish `dist`.
-   - If Render assigned a URL other than `festiveplate-api.onrender.com`, update the two `to =` lines in `netlify.toml` and push.
-3. Open the Netlify URL and log in with any demo account (password `Demo@12345`).
+To deploy:
+1. Go to https://dashboard.render.com, then **New → Blueprint**, and connect this GitHub repo.
+2. Leave `SARVAM_API_KEY` and `FLAGSMITH_ENVIRONMENT_KEY` blank for demo mode, then click **Apply**. `JWT_SECRET` and `METRICS_TOKEN` are generated automatically.
+3. When all three resources are live, open `https://festiveplate.onrender.com` and log in with any demo account (password `Demo@12345`).
+4. If Render assigned the API a different URL than `festiveplate-api.onrender.com`, update the two `destination:` hosts in `render.yaml` and push. The static site redeploys automatically.
 
 Free-tier caveats:
-- The Render free service sleeps after about 15 minutes idle, so the first request can take about 30-50 s.
+- The API sleeps after about 15 minutes idle, so the first request can take about 30-50 s.
 - Free Postgres expires after 30 days.
 - Uploaded photos are stored on ephemeral disk and lost on restart.
-- Netlify proxy requests time out after about 26 s.
+
+**Netlify alternative:** `netlify.toml` builds `frontend/` and proxies `/api` the same way. Deploy the API and database on Render, then import the repo on Netlify.
 
 ### General
 
